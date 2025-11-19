@@ -1,5 +1,12 @@
-__pycache__/
-*.pyc
-.venv/
-.DS_Store
+# Node
+node_modules/
+npm-debug.log
+yarn-error.log
+.env
 
+# OS
+.DS_Store
+thumbs.db
+
+# We intentionally want to commit dist/ so users can run via npx github:...
+# dist/ 
