@@ -1,7 +1,8 @@
-import os
+import importlib.resources
 import json
 from typing import List, Dict, Any
 import logging
+import os
 
 logger = logging.getLogger(__name__)
 
@@ -10,13 +11,19 @@ class ADKLibrary:
         self.chunks = []
         self.header_map = {}
         
-        # Om ingen sökväg anges, leta relativt till denna fil
-        if data_path is None:
-            base_dir = os.path.dirname(os.path.abspath(__file__))
-            self.data_path = os.path.join(base_dir, "adk_chunks.jsonl")
+        if data_path:
+             self.data_path = data_path
         else:
-            self.data_path = data_path
-            
+            # Använd importlib för att hitta data-filen korrekt inuti paketet
+            try:
+                # Python 3.9+ stil
+                files = importlib.resources.files("adk_mcp.data")
+                self.data_path = str(files.joinpath("adk_chunks.jsonl"))
+            except Exception:
+                # Fallback för äldre system eller om paketet körs direkt från källkod utan installation
+                base_dir = os.path.dirname(os.path.abspath(__file__))
+                self.data_path = os.path.join(base_dir, "data", "adk_chunks.jsonl")
+
         self._load_data()
 
     def _load_data(self):
@@ -34,7 +41,6 @@ class ADKLibrary:
                         logger.warning("Kunde inte avkoda en rad i JSONL-filen.")
         except FileNotFoundError:
             logger.error(f"Filen {self.data_path} hittades inte.")
-            # Hantera fallet om filen inte finns än (t.ex. vid init)
             pass
 
     def get_structure(self) -> List[str]:
@@ -46,8 +52,6 @@ class ADKLibrary:
         if topic not in self.header_map:
             return f"Error: Topic '{topic}' not found."
         
-        # Sortera chunks om det behövs, men de ligger oftast i ordning i filen
-        # Vi returnerar texten
         return "\n\n".join([c['text'] for c in self.header_map[topic]])
 
     def search(self, query: str, limit: int = 5) -> List[Dict[str, Any]]:
@@ -59,7 +63,6 @@ class ADKLibrary:
                 results.append({
                     "topic": chunk['header_path'],
                     "snippet": chunk['text'][:300] + "..." if len(chunk['text']) > 300 else chunk['text'],
-                    # Vi inkluderar inte full text här för att spara tokens vid söklistning
                 })
         return results[:limit]
 
